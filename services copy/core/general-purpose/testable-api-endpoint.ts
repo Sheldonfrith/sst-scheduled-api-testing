@@ -1,3 +1,6 @@
+import { HttpMethod } from "aws-sdk/clients/appmesh";
+import { AxiosResponse } from "axios";
+import { TestableApiError } from "./testable-api-error";
 
 type RequestGenerator = () => {
     body: any;
@@ -22,7 +25,7 @@ type RequestGenerator = () => {
       contentType: ContentTypes;
       [key: string]: string;
     };
-    private tests: Record<
+    public tests: Record<
       string,
       { requestGenerator: RequestGenerator; responseValidator: ResponseValidator }
     > = {};

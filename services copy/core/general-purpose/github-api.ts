@@ -5,10 +5,10 @@ import axios, {
   AxiosRequestHeaders,
   AxiosResponse,
 } from "axios";
-import { assert } from "core/util/asserts";
 import { Octokit } from "octokit";
-import { TestableApiError } from "./Testable-api-endpoints";
-
+import { Constants } from "../testee-api-specific/non-sensitive-constants";
+import { assert } from "../util/asserts";
+import { TestableApiError } from "./testable-api-error";
 export interface GitHubIssue {
   title: string;
   body: string;
@@ -98,14 +98,6 @@ export class GitHubApi {
   }
 
   private hitGHSecondaryRateLimit(response: OctokitResponse<any>) {
-    // HTTP/2 403
-    // > Content-Type: application/json; charset=utf-8
-    // > Connection: close
-
-    // > {
-    // >   "message": "You have exceeded a secondary rate limit and have been temporarily blocked from content creation. Please retry your request again later.",
-    // >   "documentation_url": "https://docs.github.com/rest/overview/resources-in-the-rest-api#secondary-rate-limits"
-    // > }
     return (
       response.status === 403 &&
       response.data &&
@@ -124,14 +116,15 @@ export class GitHubApi {
         error.customMessage
       ),
       body: JSON.stringify(this.createGitHubIssueBody(error)),
-      labels: ["failedTest", "bot"],
+      labels: Constants.GITHUB_ISSUE_LABELS,
       assignees: this.allIssueAssignees,
     };
   }
 
   public anyErrorToGitHubIssue(error: Error) {
+    //* You can customize how github issue titles 
     return {
-      title: `BOT-DETECTED-ERROR: ${error.name} - ${error.message.substring(
+      title: `${Constants.GITHUB_ISSUE_TITLE_START} ${error.name} - ${error.message.substring(
         error.message.length - 50,
         error.message.length
       )}`,
@@ -141,7 +134,7 @@ export class GitHubApi {
         stack: error.stack,
         name: error.name,
       }),
-      labels: ["failedTest", "bot"],
+      labels: Constants.GITHUB_ISSUE_LABELS,
       assignees: this.allIssueAssignees,
     };
   }
@@ -166,7 +159,7 @@ export class GitHubApi {
         bodyStr.substring(bodyStr.length - 50, bodyStr.length) ||
         "Body string parsing error in test code";
     }
-    return `BOT-DETECTED-ERROR: ${lastPartOfUrl} - ${method} - ${
+    return `${Constants.GITHUB_ISSUE_TITLE_START} ${lastPartOfUrl} - ${method} - ${
       response.status
     } - ${errorMessage || endOfBody}`;
   }
