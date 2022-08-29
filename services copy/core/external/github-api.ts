@@ -30,7 +30,7 @@ type GitHubIssueBodyJson = {
   };
 };
 
-export class GHApi {
+export class GitHubApi {
   private personalAccessToken: string;
   private ownerName: string;
   private repoName: string;
@@ -51,7 +51,7 @@ export class GHApi {
     });
   }
 
-  private async fetchFromGHApi(
+  private async fetchFromGitHubApi(
     httpMethod: HttpMethod,
     urlString: string,
     body: any
@@ -74,7 +74,7 @@ export class GHApi {
     let tries = 0;
     const maxTries = 20;
     //check if issue with same title already exists
-    const allIssuesResponse = await this.fetchFromGHApi("GET", requestUrlString, undefined);
+    const allIssuesResponse = await this.fetchFromGitHubApi("GET", requestUrlString, undefined);
     const matchingTitles = allIssuesResponse.data.filter((issue: any) => issue.title === issue.title);
     if (matchingTitles.length > 0) {
       //DO NOT CREATE DUPLICATE ISSUE
@@ -82,7 +82,7 @@ export class GHApi {
       return;
     }
     const interval = setInterval(async () => {
-      const createRequestResponse = await this.fetchFromGHApi(
+      const createRequestResponse = await this.fetchFromGitHubApi(
         "POST",
         requestUrlString,
         body

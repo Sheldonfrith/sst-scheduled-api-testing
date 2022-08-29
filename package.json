@@ -12,14 +12,19 @@
     "test": "sst load-config -- vitest run"
   },
   "devDependencies": {
-    "aws-cdk-lib": "2.32.0",
     "@serverless-stack/cli": "^1.9.4",
     "@serverless-stack/resources": "^1.9.4",
-    "typescript": "^4.8.2",
     "@tsconfig/node16": "^1.0.3",
+    "aws-cdk-lib": "2.32.0",
+    "typescript": "^4.8.2",
     "vitest": "^0.22.1"
   },
   "workspaces": [
     "services"
-  ]
+  ],
+  "dependencies": {
+    "@serverless-stack/node": "^1.9.4",
+    "axios": "^0.27.2",
+    "octokit": "^2.0.7"
+  }
 }
