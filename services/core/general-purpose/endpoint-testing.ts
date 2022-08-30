@@ -5,13 +5,12 @@ import { Constants } from "../testee-api-specific/non-sensitive-constants";
 import { TestableAPIEndpoint } from "./testable-api-endpoint";
 import { TestableApiError } from "./testable-api-error";
 import { assert } from "../util/asserts";
+import { GitHubIssue } from "./github-issue";
 
 export class TestableAPI {
   public rootDomain: string;
   public defaultHeaders: { [key: string]: string } | undefined;
-  public constructor(
-    defaultHeaders?: { [key: string]: string }
-  ) {
+  public constructor(defaultHeaders?: { [key: string]: string }) {
     this.rootDomain = Constants.TESTEE_API_ROOT_DOMAIN;
     this.defaultHeaders = defaultHeaders;
   }
@@ -34,19 +33,13 @@ export class EndpointTester {
     this.config = config;
     this.gitHubApiForTesteeFailureReporting = new GitHubApi(
       config.GITHUB_PERSONAL_ACCESS_TOKEN,
-      Constants.TESTEE_API_GITHUB_REPO_OWNER,
-      Constants.TESTEE_API_GITHUB_REPO_NAME,
-      Constants.TESTEE_API_GITHUB_REPO_ISSUE_ASSIGNEE
-        ? [Constants.TESTEE_API_GITHUB_REPO_ISSUE_ASSIGNEE]
-        : undefined
+      Constants.TESTEE_API_GITHUB_REPO.OWNER,
+      Constants.TESTEE_API_GITHUB_REPO.NAME
     );
     this.gitHubApiForTesterFailureReporting = new GitHubApi(
       config.GITHUB_PERSONAL_ACCESS_TOKEN,
-      Constants.THIS_GITHUB_REPO_OWNER_NAME,
-      Constants.THIS_GITHUB_REPO_NAME,
-      Constants.THIS_GITHUB_REPO_ISSUE_ASSIGNEE_USERNAME
-        ? [Constants.THIS_GITHUB_REPO_ISSUE_ASSIGNEE_USERNAME]
-        : undefined
+      Constants.THIS_GITHUB_REPO.OWNER,
+      Constants.THIS_GITHUB_REPO.NAME
     );
     this.url = this.api.rootDomain + this.endpoint.url;
   }
@@ -57,14 +50,16 @@ export class EndpointTester {
     await this.runApiTestsWithGitHubIssuesForErrors(testsToRun);
   }
 
-  private async testEndpoint(
-    testName: string
-  ) {
-    assert(testName in this.endpoint.tests);
+  private async testEndpoint(testName: string) {
+    assert(
+      testName in this.endpoint.tests,
+      "testName not in tests... " + testName
+    );
     const { requestGenerator } = this.endpoint.tests[testName];
     const config: AxiosRequestConfig = {
       url: this.url,
       method: this.endpoint.method,
+      params: requestGenerator().queryParams,
       //from most specific to least specific, to allow header overriding
       headers: {
         ...requestGenerator().headers,
@@ -92,12 +87,12 @@ export class EndpointTester {
         console.log("Ran successfully!");
       } catch (error: unknown) {
         if (error instanceof TestableApiError) {
-          this.gitHubApiForTesteeFailureReporting.createGitHubIssue(
-            this.gitHubApiForTesteeFailureReporting.testableApiErrorToGitHubIssue(error)
+          this.gitHubApiForTesteeFailureReporting.postGitHubIssue(
+            new GitHubIssue(error, "TESTEE_API_GITHUB_REPO")
           );
         } else {
-          this.gitHubApiForTesterFailureReporting.createGitHubIssue(
-            this.gitHubApiForTesterFailureReporting.anyErrorToGitHubIssue(error as Error)
+          this.gitHubApiForTesterFailureReporting.postGitHubIssue(
+            new GitHubIssue(error as Error, "THIS_GITHUB_REPO")
           );
         }
       }
