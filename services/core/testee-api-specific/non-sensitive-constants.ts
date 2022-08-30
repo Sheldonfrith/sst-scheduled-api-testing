@@ -36,6 +36,6 @@ export const Constants = {
 };
 
 assert(
-  Constants.TESTEE_API_ROOT_DOMAIN.substring(-1) === "/",
+  Constants.TESTEE_API_ROOT_DOMAIN.substring(Constants.TESTEE_API_ROOT_DOMAIN.length -1) === "/",
   "TESTEE_API_ROOT_DOMAIN must end with a slash"
 );

@@ -15,5 +15,6 @@ To customize this code and use it for your own purposes follow these steps:
 4. When you decide what API you are going to test you need to customize the code in the 'services/core/testee-api-specific' folder. First in 'non-sensitive-constants.ts' you set your main config variables like GitHub repos and Api root url. Then in the 'endpoints' folder, following the example in 'main.ts' create new endpoint definitions and their associated tests.
 5. Then you can update 'functions/lambda.ts' with functions that test your specific api, using your specific test names
 
-## Future Plans:
+## TODO:
 1. Add an additional cron job, to run less frequently, which will programatically search though GitHub issues created by this application and attempt to recreate them, if the problem cannot be recreated the issue is closed
+2. It seems GH Api does not offer an obvious way to avoid creating duplicate issues (since in the time it takes for a request to see all issues to complete and be processed more issues may have been added), so as a temporary solution run another cron job that simply removes issues in the repos with the exact same title, as long as they fit the format of a title generated programatically by this app

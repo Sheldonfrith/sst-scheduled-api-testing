@@ -81,21 +81,22 @@ export class EndpointTester {
     tests: (() => Promise<void>)[]
   ) {
     //NOT using Promise.all because I want to await each test individually, to avoid overloading the apis
+    const issuesToPost: GitHubIssue[] = [];
     for await (const test of tests) {
       try {
         await test();
         console.log("Ran successfully!");
       } catch (error: unknown) {
         if (error instanceof TestableApiError) {
-          this.gitHubApiForTesteeFailureReporting.postGitHubIssue(
-            new GitHubIssue(error, "TESTEE_API_GITHUB_REPO")
-          );
+            issuesToPost.push(new GitHubIssue(error, "TESTEE_API_GITHUB_REPO"))
         } else {
-          this.gitHubApiForTesterFailureReporting.postGitHubIssue(
-            new GitHubIssue(error as Error, "THIS_GITHUB_REPO")
-          );
+          issuesToPost.push(new GitHubIssue(error as Error, "THIS_GITHUB_REPO"));
         }
       }
     }
+    this.gitHubApiForTesteeFailureReporting
+        .postGitHubIssues(issuesToPost.filter(issue => issue.whichRepo === 'TESTEE_API_GITHUB_REPO'))
+    this.gitHubApiForTesterFailureReporting
+        .postGitHubIssues(issuesToPost.filter(issue => issue.whichRepo === 'THIS_GITHUB_REPO'))
   }
 }

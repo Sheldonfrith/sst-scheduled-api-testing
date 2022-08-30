@@ -27,6 +27,24 @@ export class GitHubApi {
     return await this.octokit.request(`${httpMethod} ${urlString}`, body);
   }
 
+  public async postGitHubIssues(issues: GitHubIssue[]) {
+    //timeout to reduce race condition creating duplicate issues
+    const timeout = setTimeout(async () => {
+      //remove duplicates to reduce GH API calls
+      const uniqueIssues = issues.filter(
+        (issue, index, self) =>
+          index ===
+          self.findIndex(
+            (t) => t.title === issue.title
+          )
+      );
+      for (const issue of uniqueIssues) {
+        await this.postGitHubIssue(issue);
+      }
+      clearTimeout(timeout);
+    }, this.avoidRaceCondition());
+  }
+
   public async postGitHubIssue(issue: GitHubIssue) {
     const body = {
       owner: this.ownerName,
@@ -76,5 +94,12 @@ export class GitHubApi {
       response.data &&
       response.data.message.includes("secondary rate limit")
     );
+  }
+  private avoidRaceCondition() {
+    // many instances of the lambda may be operational at the same time, as a temporary solution to reduce
+    // duplicate GH issue creation, choose a random time to wait before sending the issues to GitHub
+    const maxWaitMs = 5000;
+    const randomTime = Math.floor(Math.random() * maxWaitMs);
+    return randomTime;
   }
 }
