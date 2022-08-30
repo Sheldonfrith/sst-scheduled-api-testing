@@ -1,12 +1,19 @@
-## What
+# sst-scheduled-api-testing
 
 A simple sst app to test api endpoints.
 
 When an endpoint behaves unexpectedly an issue is created automatically in it's assigned GitHub repo with all information needed to reproduce/diagnose the problem.
 
-Current example is using this public api: https://sunrise-sunset.org/api
+This is an example repo, meant to be customized for your specific API testing scenario.
 
-## How
+If you clone this repo and run it, it will send its test failures to this dummy repository, and you can see example issues there from my previous runs: https://github.com/Sheldonfrith/sst-scheduled-api-test-testee-repo/issues?q=is%3Aissue+is%3Aopen
+
+*Current example is testing the main endpoint at this public API: https://sunrise-sunset.org/api*
+
+
+----
+
+## How to Customize
 
 To customize this code and use it for your own purposes follow these steps:
 1. The '.env' folder contains configuration params for the 'sst' stack creation process (since Config cannot be used there). Check out the available variables in that file and change them according to your needs (names should be self explanatory).
