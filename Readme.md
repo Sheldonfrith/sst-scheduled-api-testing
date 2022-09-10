@@ -24,4 +24,4 @@ To customize this code and use it for your own purposes follow these steps:
 
 ## TODO:
 1. Add an additional cron job, to run less frequently, which will programatically search though GitHub issues created by this application and attempt to recreate them, if the problem cannot be recreated the issue is closed
-2. It seems GH Api does not offer an obvious way to avoid creating duplicate issues (since in the time it takes for a request to see all issues to complete and be processed more issues may have been added), so as a temporary solution run another cron job that simply removes issues in the repos with the exact same title, as long as they fit the format of a title generated programatically by this app
+2. It seems GH Api does not offer an obvious way to avoid creating duplicate issues (since in the time it takes for a request-to-see-all-issues to complete and be processed more issues may have been added), so as a temporary solution run another cron job that simply removes issues in the repos with the exact same title, as long as they fit the format of a title generated programatically by this app

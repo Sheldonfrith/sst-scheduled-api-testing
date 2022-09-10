@@ -11,10 +11,11 @@ export interface GitHubIssue {
   assignees: string[] | undefined;
 }
 
-type GitHubIssueBodyJson = {
+export type GitHubIssueBodyJson = {
   userDefinedErrorMessage: string | undefined;
   endpointUrl: string;
   request: {
+    method: HttpMethod;
     headers: AxiosRequestHeaders;
     body: string;
   };

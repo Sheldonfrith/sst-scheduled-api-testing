@@ -14,9 +14,23 @@ export function CronStack({ stack }: StackContext) {
     }
   );
 
+  const cleanupGitHubReposLambda = new Function(
+    stack,
+    "cleanupGitHubReposCronFunction",
+    {
+      handler: "functions/lambda.cleanupGitHubRepos",
+      config: [GITHUB_PERSONAL_ACCESS_TOKEN],
+    }
+  );
+
   new Cron(stack, "testSunriseSunsetApiCron", {
     //set the cron job rate here
     schedule: `rate(${process.env.ENDPOINT1_TEST_SCHEDULE || "1 day"})`,
     job: testSunriseSunsetLambda,
+  });
+  new Cron(stack, 'cleanupGithubIssuesCron', {
+    //set the cron job rate here
+    schedule: `rate(${process.env.GITHUB_REPO_CLEANUP_SCHEDULE || "7 days"})`,
+    job: cleanupGitHubReposLambda ,
   });
 }

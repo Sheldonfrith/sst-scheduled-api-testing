@@ -59,11 +59,7 @@ export class GitHubApi {
     let tries = 0;
     const maxTries = 20;
     //check if issue with same title already exists
-    const allIssuesResponse = await this.fetchFromGitHubApi(
-      "GET",
-      requestUrlString,
-      undefined
-    );
+    const allIssuesResponse = await this.getAllIssues();
     const matchingTitles = allIssuesResponse.data.filter(
       (issue: any) => issue.title === issue.title
     );
@@ -101,5 +97,14 @@ export class GitHubApi {
     const maxWaitMs = 5000;
     const randomTime = Math.floor(Math.random() * maxWaitMs);
     return randomTime;
+  }
+
+  public async getAllIssues(){
+    const requestUrlString = `/repos/${this.ownerName}/${this.repoName}/issues`;
+    return await this.fetchFromGitHubApi(
+      "GET",
+      requestUrlString,
+      undefined
+    );
   }
 }
