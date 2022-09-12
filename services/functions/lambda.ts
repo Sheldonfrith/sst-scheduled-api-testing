@@ -9,6 +9,8 @@ import { GitHubApi } from "core/general-purpose/github-api";
 import { GitHubIssueBodyJson } from "core/general-purpose/github-issue";
 import { SunriseSunsetJsonEndpoint } from "core/testee-api-specific/endpoints/main";
 import { Constants } from "core/testee-api-specific/non-sensitive-constants";
+import _ from "lodash";
+
 
 export const testSunriseSunsetApi: Handler = async () => {
   //setup
@@ -54,7 +56,7 @@ export const cleanupGitHubRepos: Handler = async () => {
       const issuesWithSameTitle = allIssues.filter(
         (i: any) => {
           //for debugging
-          console.log(`i.title: ${i.title}`, `issue.title: ${issue.title}`, `equals? ${i.title == issue.title}`);
+          // console.log(`i.title: ${i.title}`, `issue.title: ${issue.title}`, `equals? ${i.title == issue.title}`);
           return (
             i.title == issue.title 
             && i.id != issue.id
@@ -63,7 +65,7 @@ export const cleanupGitHubRepos: Handler = async () => {
           );
         }
       );
-      if (issuesWithSameTitle.length > 1) {
+      if (issuesWithSameTitle.length > 0) {
         //add the comparison issue to the list of issues with same title, in order to correctly choose the oldest 
         //issue to keep
         issuesWithSameTitle.push(issue);
@@ -109,10 +111,12 @@ export const cleanupGitHubRepos: Handler = async () => {
 
       const response = await axios.request(requestConfig);
       // and check if the same problem occurs
+      
+      //TODO verify that a deep json parse is not needed for the body...
       const responseIsSame =
-        response.data === issueBodyObj.response.body &&
+        responseBodiesAreSame(response.data, JSON.parse(issueBodyObj.response.body)) &&
         response.status === issueBodyObj.response.status &&
-        response.headers === issueBodyObj.response.headers;
+        responseHeadersAreSame(response.headers, issueBodyObj.response.headers);
       if (responseIsSame) {
         // if the same problem occurs, add a comment to the issue saying that the problem still exists with timestamp info
         const comment = `AUTO GENERATED: The problem still exists as of ${new Date().toLocaleString()}`;
@@ -131,3 +135,22 @@ export const cleanupGitHubRepos: Handler = async () => {
   }
   return {};
 };
+
+function responseBodiesAreSame(
+  response1: any,
+  response2: any
+): boolean {
+  const res = _.isEqual(response1, response2);
+  return res;
+}
+function responseHeadersAreSame(
+  response1: any,
+  response2: any
+){
+  //! We ignore the date header because it will always be different
+  const res =  _.isEqualWith(response1, response2, (obj1Val,obj2Val, key)=>{
+    if (key == 'date') return true;
+    return obj1Val == obj2Val;
+  });
+  return res;
+}

@@ -86,6 +86,7 @@ export class GitHubIssue implements GitHubIssue {
         body: JSON.stringify(error.response.data),
       },
       request: {
+        method: error.response.config.method,
         headers: error.response.config.headers || {},
         body: JSON.stringify(error.response.config.data),
       },
