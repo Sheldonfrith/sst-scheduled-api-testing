@@ -22,9 +22,24 @@ export class GitHubApi {
   private async fetchFromGitHubApi(
     httpMethod: HttpMethod,
     urlString: string,
-    body: any
+    body: any,
+    maxTries: number = 1
   ) {
-    return await this.octokit.request(`${httpMethod} ${urlString}`, body);
+    if (maxTries <= 1){
+      return await this.octokit.request(`${httpMethod} ${urlString}`, body);
+    }else {
+      const timeBetweenTries = 3000;
+      let tries= 0;
+      const interval = setInterval(async () => {
+        const response = await this.octokit.request(`${httpMethod} ${urlString}`, body);
+        const successfull = !this.hitGHSecondaryRateLimit(response);
+        if (successfull || tries >= maxTries) {
+          clearInterval(interval);
+        }
+        tries++;
+      }, timeBetweenTries);
+    }
+
   }
 
   public async postGitHubIssues(issues: GitHubIssue[]) {
@@ -68,20 +83,12 @@ export class GitHubApi {
       console.log("Issue already exists: ", issue.title);
       return;
     }
-    const interval = setInterval(async () => {
-      const createRequestResponse = await this.fetchFromGitHubApi(
-        "POST",
-        requestUrlString,
-        body
-      );
-      const creationSuccessfull = !this.hitGHSecondaryRateLimit(
-        createRequestResponse
-      );
-      if (creationSuccessfull || tries >= maxTries) {
-        clearInterval(interval);
-      }
-      tries++;
-    }, 3000);
+    const createRequestResponse = await this.fetchFromGitHubApi(
+      "POST",
+      requestUrlString,
+      body,
+      maxTries
+    );
   }
 
   private hitGHSecondaryRateLimit(response: OctokitResponse<any>) {
@@ -105,6 +112,19 @@ export class GitHubApi {
       "GET",
       requestUrlString,
       undefined
+    );
+  }
+  public async addCommentToIssue(issueNumber: number,comment: string){
+    const requestUrlString = `/repos/${this.ownerName}/${this.repoName}/issues/${issueNumber}/comments`;
+    //need to allow multiple tries as these requests can trigger GH api secondary rate limit
+    return await this.fetchFromGitHubApi('POST',requestUrlString,{body: comment}, 20);
+  }
+  public async closeIssue(issueNumber: number){
+    //GH API docs dont say this will trigger secondary rate limit, but I think it will, so add additional tries
+    return await this.fetchFromGitHubApi('PATCH',
+    `/repos/${this.ownerName}/${this.repoName}/issues/${issueNumber}`,
+    {state: 'closed'},
+    20
     );
   }
 }
