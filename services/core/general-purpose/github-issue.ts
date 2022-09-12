@@ -1,8 +1,9 @@
 import { HttpMethod } from "aws-sdk/clients/appmesh";
-import { AxiosRequestHeaders, AxiosResponse } from "axios";
+import { AxiosAdapter, AxiosBasicCredentials, AxiosProxyConfig, AxiosRequestConfig, AxiosRequestHeaders, AxiosResponse, CancelToken, Method, responseEncoding, ResponseType, TransitionalOptions } from "axios";
 import { Constants } from "../testee-api-specific/non-sensitive-constants";
 import { assert } from "../util/asserts";
 import { TestableApiError } from "./testable-api-error";
+import {parse, stringify, toJSON, fromJSON} from 'flatted';
 
 export interface GitHubIssue {
   title: string;
@@ -11,22 +12,34 @@ export interface GitHubIssue {
   assignees: string[] | undefined;
 }
 
+export type GitHubIssueBodyHalfSerialized = {
+  userDefinedErrorMessage: string | undefined;
+  endpointUrl: string;
+  request: string
+  response: string
+}
 export type GitHubIssueBodyJson = {
   userDefinedErrorMessage: string | undefined;
   endpointUrl: string;
-  request: {
-    method: HttpMethod;
-    headers: AxiosRequestHeaders;
-    body: string;
-  };
-  response: {
-    status: number;
-    headers: AxiosRequestHeaders;
-    body: string;
-  };
+  request: AxiosRequestConfig 
+  response: AxiosResponse
 };
+
+
 export type RepoChoices = "THIS_GITHUB_REPO" | "TESTEE_API_GITHUB_REPO";
 export class GitHubIssue implements GitHubIssue {
+
+  static bodyFromString(body: string): GitHubIssueBodyJson {
+    const parsedBody = JSON.parse(body) as GitHubIssueBodyHalfSerialized;
+    const result: GitHubIssueBodyJson = {
+      userDefinedErrorMessage: undefined,
+      endpointUrl: "",
+      request: parse(parsedBody.request) as AxiosRequestConfig,
+      response: parse(parsedBody.response) as AxiosResponse
+    };
+    return result;
+  }
+
   public title!: string;
   public body!: string;
   public labels: string[] | undefined;
@@ -74,22 +87,14 @@ export class GitHubIssue implements GitHubIssue {
       name: error.name,
     });
   }
-  private createGitHubIssueBody(error: TestableApiError): GitHubIssueBodyJson {
+  private createGitHubIssueBody(error: TestableApiError): GitHubIssueBodyHalfSerialized {
     assert(error.response.config.url, "error response url is nullish");
     assert(error.response.config.method, "error response method is nullish");
     return {
       userDefinedErrorMessage: error.customMessage,
       endpointUrl: error.response.config.url,
-      response: {
-        status: error.response.status,
-        headers: error.response.headers,
-        body: JSON.stringify(error.response.data),
-      },
-      request: {
-        method: error.response.config.method,
-        headers: error.response.config.headers || {},
-        body: JSON.stringify(error.response.config.data),
-      },
+      response: stringify(error.response),
+      request: stringify(error.response.config)
     };
   }
 
