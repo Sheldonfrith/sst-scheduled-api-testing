@@ -49,26 +49,50 @@ export const cleanupGitHubRepos: Handler = async () => {
     );
     const allIssues = await (await gitHubApi.getAllIssues()).data;
     //remove issues with duplicate titles first
-    const issuesToClose: any[] = [];
-    allIssues.forEach((issue: any) => {
+    const issuesClosedIds: number[] = [];
+    for await (const issue of allIssues) {
       const issuesWithSameTitle = allIssues.filter(
-        (i: any) => i.title === issue.title
+        (i: any) => {
+          //for debugging
+          console.log(`i.title: ${i.title}`, `issue.title: ${issue.title}`, `equals? ${i.title == issue.title}`);
+          return (
+            i.title == issue.title 
+            && i.id != issue.id
+            && !issuesClosedIds.includes(i.id)
+            && !issuesClosedIds.includes(issue.id)
+          );
+        }
       );
       if (issuesWithSameTitle.length > 1) {
-        //remove the most recent issue
+        //add the comparison issue to the list of issues with same title, in order to correctly choose the oldest 
+        //issue to keep
+        issuesWithSameTitle.push(issue);
+      
         issuesWithSameTitle.sort((a: any, b: any) => {
           return (
             new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-          );
-        });
-        issuesWithSameTitle.pop();
-        issuesToClose.push(...issuesWithSameTitle);
+            );
+          });
+        //above sort is ascending, so the oldest issue is at index 0
+        //remove the most recent issues until only one left
+        while (issuesWithSameTitle.length > 1) {
+          const mostRecentIssue = issuesWithSameTitle.pop();
+          if (issuesClosedIds.includes(mostRecentIssue.id)) continue;
+          issuesClosedIds.push(mostRecentIssue.id);
+          await gitHubApi.closeIssue(mostRecentIssue.number,
+            `AUTO GENERATED: 
+            This issue was closed because it is a duplicate of issue #${issuesWithSameTitle[0].number}.
+            Titles were identical.
+            All but oldest issue are closed in this case.
+            `
+            );
+        }
       }
-    });
+    }
 
-    // get issues not yet set to be closed
+    // get issues not yet closed
     const issuesToCheck = allIssues.filter((issue: any) => {
-      return !issuesToClose.some((i: any) => i.id === issue.id);
+      return !issuesClosedIds.some((i: any) => i === issue.id);
     });
 
     for await (const issue of issuesToCheck) {
@@ -96,19 +120,14 @@ export const cleanupGitHubRepos: Handler = async () => {
       } else {
         //There may still be an issue, but it's not the same as the one that was reported, and so the issue should be closed
         // the other cron job should handle creating a new issue in this case
-        gitHubApi.addCommentToIssue(
-          issue.number,
+        await gitHubApi.closeIssue(
+          issue.id,
           "AUTO GENERATED: The problem no longer exists, and so this issue will be closed. Response recieved from api at this time = " +
             JSON.stringify(response.data)
         );
-        issuesToClose.push(issue);
+        issuesClosedIds.push(issue.id);
       }
     }
-    //close all issues that need to be closed
-    for await (const issue of issuesToClose) {
-      await gitHubApi.closeIssue(issue.number);
-    }
   }
-
   return {};
 };

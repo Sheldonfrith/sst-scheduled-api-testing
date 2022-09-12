@@ -75,6 +75,7 @@ export class GitHubApi {
     const maxTries = 20;
     //check if issue with same title already exists
     const allIssuesResponse = await this.getAllIssues();
+    if (!allIssuesResponse) return;
     const matchingTitles = allIssuesResponse.data.filter(
       (issue: any) => issue.title === issue.title
     );
@@ -108,22 +109,23 @@ export class GitHubApi {
 
   public async getAllIssues(){
     const requestUrlString = `/repos/${this.ownerName}/${this.repoName}/issues`;
+    const emptyBody = {data: []};
     return await this.fetchFromGitHubApi(
       "GET",
       requestUrlString,
       undefined
-    );
+    ) || emptyBody;
   }
   public async addCommentToIssue(issueNumber: number,comment: string){
     const requestUrlString = `/repos/${this.ownerName}/${this.repoName}/issues/${issueNumber}/comments`;
     //need to allow multiple tries as these requests can trigger GH api secondary rate limit
     return await this.fetchFromGitHubApi('POST',requestUrlString,{body: comment}, 20);
   }
-  public async closeIssue(issueNumber: number){
+  public async closeIssue(issueNumber: number, comment?: string){
     //GH API docs dont say this will trigger secondary rate limit, but I think it will, so add additional tries
     return await this.fetchFromGitHubApi('PATCH',
     `/repos/${this.ownerName}/${this.repoName}/issues/${issueNumber}`,
-    {state: 'closed'},
+    comment?{state: 'closed', body: comment}: {state: 'closed'},
     20
     );
   }
