@@ -29,15 +29,9 @@ export type GitHubIssueBodyJson = {
 export type RepoChoices = "THIS_GITHUB_REPO" | "TESTEE_API_GITHUB_REPO";
 export class GitHubIssue implements GitHubIssue {
 
-  static bodyFromString(body: string): GitHubIssueBodyJson {
+  static bodyFromString(body: string): GitHubIssueBodyHalfSerialized {
     const parsedBody = JSON.parse(body) as GitHubIssueBodyHalfSerialized;
-    const result: GitHubIssueBodyJson = {
-      userDefinedErrorMessage: undefined,
-      endpointUrl: "",
-      request: parse(parsedBody.request) as AxiosRequestConfig,
-      response: parse(parsedBody.response) as AxiosResponse
-    };
-    return result;
+    return parsedBody;
   }
 
   public title!: string;

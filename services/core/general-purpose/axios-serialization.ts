@@ -1,12 +1,15 @@
-import {
+import axios, {
   AxiosBasicCredentials,
   AxiosRequestConfig,
   AxiosRequestHeaders,
+  AxiosResponse,
+  AxiosResponseHeaders,
   Method,
   responseEncoding,
   ResponseType,
 } from "axios";
 import { assert } from "vitest";
+import _ from "lodash";
 
 type InvalidKeyAndMessage = {
   key: string;
@@ -87,17 +90,17 @@ export class AxiosRequestSerializer {
       }
     });
     handleInvalidKeysDetected(invalidKeys);
-    return JSON.stringify(this.getSerializable(requestConfig));
+    return JSON.stringify(this.toSerializable(requestConfig));
   }
 
   public deserialize(serialized: string): AxiosRequestConfig {
     const deserialized = JSON.parse(serialized);
     return deserialized;
-    }
+  }
 
-
-
-  private getSerializable(requestConfig: AxiosRequestConfig): AxiosRequestConfigSerializable {
+  public toSerializable(
+    requestConfig: AxiosRequestConfig
+  ): AxiosRequestConfigSerializable {
     return {
       method: requestConfig.method,
       baseURL: requestConfig.baseURL,
@@ -120,17 +123,70 @@ export class AxiosRequestSerializer {
   }
 }
 
-
-//TODO STOPPED HER
+//TODO STOPPED HERE
 export type AxiosResponseSerializable = {
+  data: any;
+  status: number;
+  statusText: string;
+  headers: AxiosResponseHeaders;
+};
 
-}
 export class AxiosResponseSerializer {
-    public serialize(response: any): string {
-        return JSON.stringify(response);
-    }
-    
-    public deserialize(serialized: string): any {
-        return JSON.parse(serialized);
-    }
+  public serialize(response: AxiosResponse): string {
+    const serializable = this.toSerializable(response);
+    return JSON.stringify(serializable);
+  }
+  public deserialize(serialized: string): AxiosResponseSerializable {
+    return JSON.parse(serialized);
+  }
+  public toSerializable(response: AxiosResponse): AxiosResponseSerializable {
+    return {
+      data: response.data,
+      status: response.status,
+      statusText: response.statusText,
+      headers: response.headers,
+    };
+  }
+}
+
+export class AxiosComparitor {
+  public async sendNewRequestAndCompareToOldResponse(
+    originalRequestSerialized: string,
+    originalResponseSerialized: string
+  ) {
+    const originalRequestConfig = new AxiosRequestSerializer().deserialize(
+      originalRequestSerialized
+    );
+    const originalResponse = new AxiosResponseSerializer().deserialize(
+      originalResponseSerialized
+    );
+    const newResponse = await axios.request(originalRequestConfig);
+    const newResponseSerializable =
+      new AxiosResponseSerializer().toSerializable(newResponse);
+    return this.compare(originalResponse, newResponseSerializable);
+  }
+  private compare(
+    response1: AxiosResponseSerializable,
+    response2: AxiosResponseSerializable
+  ) {
+    return (
+      this.responseBodiesAreSame(response1.data, response2.data) &&
+      response1.status == response2.status &&
+      response1.statusText == response2.statusText &&
+      this.responseHeadersAreSame(response1.headers, response2.headers)
+    );
+  }
+
+  private responseBodiesAreSame(response1: any, response2: any): boolean {
+    const res = _.isEqual(response1, response2);
+    return res;
+  }
+  private responseHeadersAreSame(response1: any, response2: any) {
+    //! We ignore the date header because it will always be different
+    const res = _.isEqualWith(response1, response2, (obj1Val, obj2Val, key) => {
+      if (key == "date") return true;
+      return obj1Val == obj2Val;
+    });
+    return res;
+  }
 }

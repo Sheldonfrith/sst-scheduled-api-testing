@@ -14,6 +14,7 @@ import {
 import { SunriseSunsetJsonEndpoint } from "core/testee-api-specific/endpoints/main";
 import { Constants } from "core/testee-api-specific/non-sensitive-constants";
 import _ from "lodash";
+import {AxiosComparitor} from "core/general-purpose/axios-serialization";
 
 export const testSunriseSunsetApi: Handler = async () => {
   //setup
@@ -101,14 +102,14 @@ export const cleanupGitHubRepos: Handler = async () => {
 
     for await (const issue of issuesToCheck) {
       // Now with all remaining, non closed issues, recreate the http request from the issue body
-      const issueBody: GitHubIssueBodyJson = GitHubIssue.bodyFromString(issue.body);
-      //create axios request config
-      const response = await axios.request(issueBody.request);
-      // and check if the same problem occurs
-      const responseIsSame = axiosResponsesAreEquivalent(
-        response,
-        issueBody.response
+      const issueBody: GitHubIssueBodyHalfSerialized = GitHubIssue.bodyFromString(
+        issue.body
       );
+      const comparitor = new AxiosComparitor();
+      const responseIsSame = await comparitor.sendNewRequestAndCompareToOldResponse(
+          issueBody.request,
+          issueBody.response
+        );
       if (responseIsSame) {
         // if the same problem occurs, add a comment to the issue saying that the problem still exists with timestamp info
         const comment = `AUTO GENERATED: The problem still exists as of ${new Date().toLocaleString()}`;
@@ -119,7 +120,7 @@ export const cleanupGitHubRepos: Handler = async () => {
         await gitHubApi.closeIssue(
           issue.id,
           "AUTO GENERATED: The problem no longer exists, and so this issue will be closed. Response recieved from api at this time = " +
-            JSON.stringify(response.data)
+            JSON.stringify(issueBody.response)
         );
         issuesClosedIds.push(issue.id);
       }
@@ -127,24 +128,3 @@ export const cleanupGitHubRepos: Handler = async () => {
   }
   return {};
 };
-
-function axiosResponsesAreEquivalent(r1: AxiosResponse, r2: AxiosResponse) {
-  return (
-    responseBodiesAreSame(r1.data, r2.data) &&
-    r1.status === r2.status &&
-    responseHeadersAreSame(r1.headers, r2.headers)
-  );
-}
-
-function responseBodiesAreSame(response1: any, response2: any): boolean {
-  const res = _.isEqual(response1, response2);
-  return res;
-}
-function responseHeadersAreSame(response1: any, response2: any) {
-  //! We ignore the date header because it will always be different
-  const res = _.isEqualWith(response1, response2, (obj1Val, obj2Val, key) => {
-    if (key == "date") return true;
-    return obj1Val == obj2Val;
-  });
-  return res;
-}
